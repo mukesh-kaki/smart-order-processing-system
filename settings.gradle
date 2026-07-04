@@ -1,0 +1,15 @@
+pluginManagement {
+    repositories {
+        gradlePluginPortal()
+        mavenCentral()
+    }
+}
+
+rootProject.name = 'smart-order-processing-system'
+
+include 'common-events'
+include 'order-service'
+include 'inventory-service'
+include 'common-outbox'
+include 'payment-service'
+

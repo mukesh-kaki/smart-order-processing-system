@@ -1,0 +1,14 @@
+spring:
+  kafka:
+    bootstrap-servers: localhost:9092
+
+    consumer:
+      group-id: payment-service
+
+app:
+  kafka:
+    topics:
+      mappings:
+        PaymentRequestedEvent: payment-requested-events
+        PaymentCompletedEvent: payment-completed-events
+        PaymentFailedEvent: payment-failed-events

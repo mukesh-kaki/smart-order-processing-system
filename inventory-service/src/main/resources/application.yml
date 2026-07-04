@@ -1,0 +1,13 @@
+spring:
+  kafka:
+    bootstrap-servers: localhost:9092
+    consumer:
+      group-id: inventory-service
+
+app:
+  kafka:
+    topics:
+      mappings:
+        OrderCreatedEvent: order-created-events
+        InventoryReservedEvent: inventory-reserved-events
+        InventoryReleaseEvent: inventory-release_event
