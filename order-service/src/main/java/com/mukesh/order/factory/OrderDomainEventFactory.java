@@ -103,7 +103,9 @@ public class OrderDomainEventFactory {
 
         return new OrderItem(
                 item.getProductId(),
-                item.getQuantity()
+                null,
+                item.getQuantity(),
+                null
         );
 
     }

@@ -1,6 +1,5 @@
 package com.mukesh.order.publisher;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
 import com.mukesh.commonoutbox.entity.OutboxEntity;
 import com.mukesh.commonoutbox.entity.EventStatus;
 import com.mukesh.commonoutbox.repository.OutboxRepository;
@@ -49,13 +48,16 @@ public class OrderOutboxPublisher {
         }
     }
 
-    private void publish(OutboxEntity event){
-        String topic= topicProperties.getTopic(event.getEventType());
+    private void publish(OutboxEntity event)
+            throws InterruptedException, ExecutionException {
+
+        String topic = topicProperties.getTopic(event.getEventType());
+
         kafkaTemplate.send(
                 topic,
                 event.getAggregateId().toString(),
                 event.getPayload()
-        ).get(); //kafka send the template
+        ).get();
         event.setStatus(EventStatus.SENT);
         event.setPublishedAt(Instant.now());
 

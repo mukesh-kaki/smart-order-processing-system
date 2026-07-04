@@ -1,6 +1,6 @@
 package com.mukesh.order.producer;
 
-import com.mukesh.order.events.OrderCreatedEvent;
+import com.mukesh.events.OrderCreatedEvent;
 
 public interface OrderEventPublisher {
 

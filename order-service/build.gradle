@@ -16,6 +16,8 @@ dependencies {
 
     implementation project(":common-events")
 
+    implementation project(":common-outbox")
+
     implementation "org.springframework.boot:spring-boot-starter-web"
 
     implementation "org.springframework.kafka:spring-kafka"

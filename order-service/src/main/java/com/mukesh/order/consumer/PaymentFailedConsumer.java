@@ -24,12 +24,6 @@ public class PaymentFailedConsumer {
                 event.orderId()
         );
 
-        //orderService.handlePaymentFailed(event);
-    }
-    @Override
-    protected void handle(PaymentFailedEvent event) {
-
         orderService.handlePaymentFailed(event);
-
     }
 }
