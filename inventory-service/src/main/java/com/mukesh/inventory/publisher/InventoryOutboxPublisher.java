@@ -1,9 +1,14 @@
 package com.mukesh.inventory.publisher;
 
+import com.mukesh.commonoutbox.entity.EventStatus;
+import com.mukesh.commonoutbox.entity.OutboxEntity;
+import com.mukesh.commonoutbox.repository.OutboxRepository;
+import com.mukesh.inventory.config.KafkaTopicProperties;
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.kafka.core.KafkaTemplate;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
-import org.w3c.dom.events.Event;
 
 import java.time.Instant;
 import java.util.List;
@@ -21,34 +26,41 @@ public class InventoryOutboxPublisher {
     private final KafkaTopicProperties kafkaTopicProperties;
 
     @Scheduled(fixedDelay = 5000)
-    public void publishEvents(){
-        List<OutboxEntity> events= outboxRepository.findByStatus(EventStatus.NEW);
+    public void publishEvents() {
+
+        List<OutboxEntity> events = outboxRepository.findByStatus(EventStatus.NEW);
+
         if (events.isEmpty()) {
             return;
         }
+
         log.info("Found {} unpublished events", events.size());
 
-
-        for(OutboxEntity event: events){
-            try{
+        for (OutboxEntity event : events) {
+            try {
                 publish(event);
 
-            }catch(InterruptedException  ex){
+            } catch (InterruptedException ex) {
                 Thread.currentThread().interrupt();
                 log.error("Failed to publish event {}", event.getId(), ex);
-            }catch(ExecutionException ex){
+            } catch (ExecutionException ex) {
                 log.error("Kafka publish failed for event {}", event.getId(), ex);
             }
         }
-
     }
 
-    private void publish(OutboxEntity event){
-        String topic= kafkaTopicProperties.getTopic(event.getType());
+    private void publish(OutboxEntity event)
+            throws InterruptedException, ExecutionException {
 
-        kafkaTemplate.send(topic, event.getAggregateId(), event.getPayload()).get();
+        String topic = kafkaTopicProperties.getTopic(event.getEventType());
+
+        kafkaTemplate.send(
+                topic,
+                event.getAggregateId().toString(),
+                event.getPayload()
+        ).get();
+
         event.setStatus(EventStatus.SENT);
-
         event.setPublishedAt(Instant.now());
 
         outboxRepository.save(event);
