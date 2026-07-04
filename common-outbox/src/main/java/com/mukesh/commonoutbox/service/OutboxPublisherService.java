@@ -1,6 +1,7 @@
 package com.mukesh.commonoutbox.service;
 
 import com.mukesh.commonoutbox.entity.AggregateType;
+import com.mukesh.events.DomainEvent;
 
 import java.util.UUID;
 

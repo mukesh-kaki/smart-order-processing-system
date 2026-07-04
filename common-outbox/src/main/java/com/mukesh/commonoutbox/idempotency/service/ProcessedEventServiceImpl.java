@@ -1,6 +1,6 @@
 package com.mukesh.commonoutbox.idempotency.service;
 
-import com.mukesh.commonoutbox.idempotency.entity.ProcessedEventEntity;
+import com.mukesh.commonoutbox.entity.ProcessedEventEntity;
 import com.mukesh.commonoutbox.idempotency.repository.ProcessedEventRepository;
 import com.mukesh.events.DomainEvent;
 import lombok.RequiredArgsConstructor;
