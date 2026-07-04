@@ -18,32 +18,33 @@ import java.util.concurrent.ExecutionException;
 @Component
 @RequiredArgsConstructor
 public class PaymentOutboxPublisher {
+
     private final OutboxRepository outboxRepository;
-    private final KafkaTemplate kafkaTemplate;
+    private final KafkaTemplate<String, Object> kafkaTemplate;
     private final KafkaTopicProperties kafkaTopicProperties;
 
     @Scheduled(fixedDelay = 5000)
     public void publishEvent() {
+
         List<OutboxEntity> events = outboxRepository.findByStatus(EventStatus.NEW);
+
         if (events.isEmpty()) {
             return;
         }
+
         log.info("Found {} payment events to publish.", events.size());
+
         for (OutboxEntity event : events) {
             try {
                 publish(event);
             } catch (InterruptedException ex) {
-
                 Thread.currentThread().interrupt();
-
                 log.error(
                         "Interrupted while publishing {}",
                         event.getId(),
                         ex
                 );
-
             } catch (ExecutionException ex) {
-
                 log.error(
                         "Failed to publish {}",
                         event.getId(),
@@ -52,18 +53,25 @@ public class PaymentOutboxPublisher {
             }
         }
     }
-        private void publish (OutboxEntity event) throws InterruptedException, ExecutionException {
-        String topic=kafkaTopicProperties.getTopic(event.getType());
-        kafkaTemplate.send(topic, event.getAggregateId(), event.getPayload()).get();
+
+    private void publish(OutboxEntity event)
+            throws InterruptedException, ExecutionException {
+
+        String topic = kafkaTopicProperties.getTopic(event.getEventType());
+
+        kafkaTemplate.send(
+                topic,
+                event.getAggregateId().toString(),
+                event.getPayload()
+        ).get();
 
         event.setStatus(EventStatus.SENT);
         event.setPublishedAt(Instant.now());
         outboxRepository.save(event);
-            log.info(
-                    "Published event {} successfully.",
-                    event.getId()
-            );
 
-        }
-
+        log.info(
+                "Published event {} successfully.",
+                event.getId()
+        );
+    }
 }
