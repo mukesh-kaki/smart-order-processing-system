@@ -1,0 +1,16 @@
+server:
+  port: 8082
+
+spring:
+
+  datasource:
+    url: jdbc:postgresql://dev-inventory-db:5432/inventorydb
+    username: inventory
+    password: password
+
+  jpa:
+    hibernate:
+      ddl-auto: validate
+
+  kafka:
+    bootstrap-servers: dev-kafka:9092

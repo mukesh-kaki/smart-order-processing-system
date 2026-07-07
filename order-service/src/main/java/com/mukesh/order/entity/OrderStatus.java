@@ -4,9 +4,13 @@ public enum OrderStatus {
 
     CREATED,
 
+    INVENTORY_PENDING,
+
     INVENTORY_RESERVED,
 
     PAYMENT_PENDING,
+
+    PAYMENT_COMPLETED,
 
     COMPLETED,
 

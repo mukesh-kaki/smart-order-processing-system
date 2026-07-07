@@ -3,14 +3,17 @@ package com.mukesh.events;
 import java.time.Instant;
 import java.util.UUID;
 
-public record InventoryReleaseEvent( UUID eventId,
+public record InventoryReleaseEvent(
+
+        UUID eventId,
+
         UUID orderId,
 
-                                    UUID customerId,
+        UUID productId,
 
-                                    UUID productId,
+        int quantity,
 
-                                    Integer quantity,
+        Instant releasedRequestedAt
 
-                                    Instant releasedAt)implements DomainEvent {
+) implements DomainEvent {
 }

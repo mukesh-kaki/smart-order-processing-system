@@ -77,24 +77,10 @@ public class OrderEntity {
 
     }
 
-    public void markInventoryReserved() {
-        this.status = OrderStatus.INVENTORY_RESERVED;
-    }
+    public void transitionTo(OrderStatus status) {
 
-    public void markPaymentPending() {
-        this.status = OrderStatus.PAYMENT_PENDING;
-    }
+        OrderStateMachine.transition(this, status);
 
-    public void markCompleted() {
-        this.status = OrderStatus.COMPLETED;
-    }
-
-    public void markPaymentFailed() {
-        this.status = OrderStatus.PAYMENT_FAILED;
-    }
-
-    public void cancel() {
-        this.status = OrderStatus.CANCELLED;
     }
 
 }

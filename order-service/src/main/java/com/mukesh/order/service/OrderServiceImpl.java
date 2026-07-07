@@ -1,10 +1,6 @@
 package com.mukesh.order.service;
 
-import com.mukesh.commonoutbox.entity.AggregateType;
-import com.mukesh.commonoutbox.idempotency.service.ProcessedEventService;
-import com.mukesh.commonoutbox.service.OutboxPublisherService;
-import com.mukesh.events.DomainEvent;
-import com.mukesh.events.InventoryReleaseEvent;
+import com.mukesh.events.InventoryReleasedEvent;
 import com.mukesh.events.InventoryReservedEvent;
 import com.mukesh.events.OrderCreatedEvent;
 import com.mukesh.events.PaymentCompletedEvent;
@@ -16,14 +12,18 @@ import com.mukesh.order.entity.OrderEntity;
 import com.mukesh.order.entity.OrderStatus;
 import com.mukesh.order.factory.OrderDomainEventFactory;
 import com.mukesh.order.mapper.OrderMapper;
+import com.mukesh.order.publisher.OrderEventPublisher;
 import com.mukesh.order.repository.OrderRepository;
 import jakarta.persistence.EntityNotFoundException;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.List;
 import java.util.UUID;
 
+@Slf4j
 @Service
 @RequiredArgsConstructor
 public class OrderServiceImpl implements OrderService {
@@ -31,77 +31,204 @@ public class OrderServiceImpl implements OrderService {
     private final OrderRepository orderRepository;
     private final OrderMapper orderMapper;
     private final OrderDomainEventFactory orderDomainEventFactory;
-    private final OutboxPublisherService outboxPublisherService;
-    private final ProcessedEventService processedEventService;
+    private final OrderEventPublisher orderEventPublisher;
 
     @Override
     @Transactional
     public OrderResponse createOrder(CreateOrderRequest request) {
 
+        log.info("Creating order for customer {}", request.customerId());
+
         OrderEntity order = orderMapper.buildOrder(request);
 
-        order.setStatus(OrderStatus.CREATED);
+        // NEW -> CREATED
+        order.transitionTo(OrderStatus.CREATED);
 
         OrderEntity savedOrder = orderRepository.save(order);
 
-        OrderCreatedEvent event =
+        log.info(
+                "Order {} created successfully",
+                savedOrder.getOrderId()
+        );
+
+        OrderCreatedEvent orderCreatedEvent =
                 orderDomainEventFactory.createOrderCreatedEvent(savedOrder);
 
-        publishOrderEvent(savedOrder.getOrderId(), event);
+        orderEventPublisher.publishOrderCreated(
+                savedOrder.getOrderId(),
+                orderCreatedEvent
+        );
+
+        log.info(
+                "Published OrderCreatedEvent for Order {}",
+                savedOrder.getOrderId()
+        );
+
+        // CREATED -> INVENTORY_PENDING
+        savedOrder.transitionTo(OrderStatus.INVENTORY_PENDING);
+
+        orderRepository.save(savedOrder);
+
+        log.info(
+                "Order {} moved to INVENTORY_PENDING",
+                savedOrder.getOrderId()
+        );
 
         return orderMapper.toResponse(savedOrder);
     }
 
     @Override
     @Transactional
-    public void handleInventoryReserved(InventoryReservedEvent event) {
+    public void handleInventoryReserved(
+            InventoryReservedEvent event) {
+
+        log.info(
+                "Received InventoryReservedEvent for Order {}",
+                event.orderId()
+        );
 
         OrderEntity order = getOrder(event.orderId());
 
-        order.setStatus(OrderStatus.INVENTORY_RESERVED);
+        // INVENTORY_PENDING -> INVENTORY_RESERVED
+        order.transitionTo(OrderStatus.INVENTORY_RESERVED);
+
+        orderRepository.save(order);
+
+        log.info(
+                "Inventory reserved for Order {}",
+                order.getOrderId()
+        );
 
         PaymentRequestedEvent paymentRequestedEvent =
                 orderDomainEventFactory.createPaymentRequestedEvent(order);
 
-        publishOrderEvent(order.getOrderId(), paymentRequestedEvent);
+        orderEventPublisher.publishPaymentRequested(
+                order.getOrderId(),
+                paymentRequestedEvent
+        );
 
-        processedEventService.markProcessed(
-                event,
-                getClass()
+        log.info(
+                "Published PaymentRequestedEvent for Order {}",
+                order.getOrderId()
+        );
+
+        // INVENTORY_RESERVED -> PAYMENT_PENDING
+        order.transitionTo(OrderStatus.PAYMENT_PENDING);
+
+        orderRepository.save(order);
+
+        log.info(
+                "Order {} moved to PAYMENT_PENDING",
+                order.getOrderId()
         );
     }
 
     @Override
     @Transactional
-    public void handlePaymentCompleted(PaymentCompletedEvent event) {
+    public void handlePaymentCompleted(
+            PaymentCompletedEvent event) {
+
+        log.info(
+                "Received PaymentCompletedEvent for Order {}",
+                event.orderId()
+        );
 
         OrderEntity order = getOrder(event.orderId());
 
-        order.setStatus(OrderStatus.COMPLETED);
+        // PAYMENT_PENDING -> PAYMENT_COMPLETED
+        order.transitionTo(OrderStatus.PAYMENT_COMPLETED);
 
-        processedEventService.markProcessed(
-                event,
-                getClass()
+        orderRepository.save(order);
+
+        log.info(
+                "Payment completed for Order {}",
+                order.getOrderId()
+        );
+
+        // PAYMENT_COMPLETED -> COMPLETED
+        order.transitionTo(OrderStatus.COMPLETED);
+
+        orderRepository.save(order);
+
+        log.info(
+                "Order {} completed successfully",
+                order.getOrderId()
         );
     }
 
     @Override
     @Transactional
-    public void handlePaymentFailed(PaymentFailedEvent event) {
+    public void handlePaymentFailed(
+            PaymentFailedEvent event) {
+
+        log.warn(
+                "Payment failed for Order {}",
+                event.orderId()
+        );
 
         OrderEntity order = getOrder(event.orderId());
 
-        order.setStatus(OrderStatus.PAYMENT_FAILED);
+        // PAYMENT_PENDING -> PAYMENT_FAILED
+        order.transitionTo(OrderStatus.PAYMENT_FAILED);
 
-        for (InventoryReleaseEvent releaseEvent :
-                orderDomainEventFactory.createInventoryReleaseEvents(order)) {
+        orderRepository.save(order);
 
-            publishOrderEvent(order.getOrderId(), releaseEvent);
-        }
+        List<InventoryReleasedEvent> releaseEvents =
+                orderDomainEventFactory.createInventoryReleaseEvents(order);
 
-        processedEventService.markProcessed(
-                event,
-                getClass()
+        orderEventPublisher.publishInventoryRelease(
+                order.getOrderId(),
+                releaseEvents
+        );
+
+        log.info(
+                "Published {} InventoryReleaseEvents for Order {}",
+                releaseEvents.size(),
+                order.getOrderId()
+        );
+
+        /*
+         * Order is NOT cancelled here.
+         *
+         * Wait until InventoryService confirms
+         * inventory has been released.
+         *
+         * PAYMENT_FAILED
+         *          │
+         *          ▼
+         * InventoryReleaseEvent
+         *          │
+         *          ▼
+         * InventoryReleasedEvent
+         *          │
+         *          ▼
+         * CANCELLED
+         */
+    }
+
+    @Override
+    @Transactional
+    public void handleInventoryReleased(InventoryReleasedEvent event) {
+
+        log.info(
+                "Received InventoryReleasedEvent for Order {}",
+                event.orderId()
+        );
+
+        OrderEntity order = getOrder(event.orderId());
+
+        /*
+         * PAYMENT_FAILED
+         *        ↓
+         * CANCELLED
+         */
+        order.transitionTo(OrderStatus.CANCELLED);
+
+        orderRepository.save(order);
+
+        log.info(
+                "Order {} cancelled successfully",
+                order.getOrderId()
         );
     }
 
@@ -112,17 +239,5 @@ public class OrderServiceImpl implements OrderService {
                         new EntityNotFoundException(
                                 "Order not found : " + orderId
                         ));
-    }
-
-    private void publishOrderEvent(
-            UUID aggregateId,
-            DomainEvent event
-    ) {
-
-        outboxPublisherService.publish(
-                aggregateId,
-                AggregateType.ORDER,
-                event
-        );
     }
 }

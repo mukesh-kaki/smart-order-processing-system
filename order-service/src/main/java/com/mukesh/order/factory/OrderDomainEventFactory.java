@@ -1,6 +1,6 @@
 package com.mukesh.order.factory;
 
-import com.mukesh.events.InventoryReleaseEvent;
+import com.mukesh.events.InventoryReleasedEvent;
 import com.mukesh.events.OrderCreatedEvent;
 import com.mukesh.events.OrderItem;
 import com.mukesh.events.PaymentRequestedEvent;
@@ -60,7 +60,7 @@ public class OrderDomainEventFactory {
      * One InventoryReleaseEvent is created
      * for every reserved product.
      */
-    public List<InventoryReleaseEvent> createInventoryReleaseEvents(
+    public List<InventoryReleasedEvent> createInventoryReleaseEvents(
             OrderEntity order
     ) {
 
@@ -71,12 +71,12 @@ public class OrderDomainEventFactory {
 
     }
 
-    private InventoryReleaseEvent createInventoryReleaseEvent(
+    private InventoryReleasedEvent createInventoryReleaseEvent(
             OrderEntity order,
             OrderItemEntity item
     ) {
 
-        return new InventoryReleaseEvent(
+        return new InventoryReleasedEvent(
                 UUID.randomUUID(),
                 order.getOrderId(),
                 order.getCustomerId(),

@@ -1,0 +1,206 @@
+services:
+
+  # ==========================================================
+  # PostgreSQL
+  # ==========================================================
+  postgres:
+    image: postgres:16
+    container_name: postgres
+    restart: unless-stopped
+
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: ${POSTGRES_DB}
+
+    ports:
+      - "${POSTGRES_PORT}:5432"
+
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+      - ./docker/postgres/init.sql:/docker-entrypoint-initdb.d/init.sql
+
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+    networks:
+      - smart-order-network
+
+  # ==========================================================
+  # Kafka (KRaft Mode)
+  # ==========================================================
+  kafka:
+    image: confluentinc/cp-kafka:7.7.1
+    container_name: kafka
+    restart: unless-stopped
+
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+    ports:
+      - "9092:9092"
+
+    environment:
+      CLUSTER_ID: MkU3OEVBNTcwNTJENDM2Qk
+
+      KAFKA_NODE_ID: 1
+      KAFKA_PROCESS_ROLES: broker,controller
+
+      KAFKA_CONTROLLER_QUORUM_VOTERS: 1@kafka:29093
+
+      KAFKA_CONTROLLER_LISTENER_NAMES: CONTROLLER
+
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: CONTROLLER:PLAINTEXT,PLAINTEXT:PLAINTEXT
+
+      KAFKA_LISTENERS: PLAINTEXT://0.0.0.0:9092,CONTROLLER://0.0.0.0:29093
+
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka:9092
+
+      KAFKA_INTER_BROKER_LISTENER_NAME: PLAINTEXT
+
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+
+      KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR: 1
+
+      KAFKA_TRANSACTION_STATE_LOG_MIN_ISR: 1
+
+      KAFKA_GROUP_INITIAL_REBALANCE_DELAY_MS: 0
+
+    healthcheck:
+      test:
+        [
+          "CMD-SHELL",
+          "kafka-topics --bootstrap-server localhost:9092 --list >/dev/null 2>&1"
+        ]
+      interval: 20s
+      timeout: 10s
+      retries: 10
+
+    networks:
+      - smart-order-network
+
+  # ==========================================================
+  # Kafka UI
+  # ==========================================================
+  kafka-ui:
+    image: provectuslabs/kafka-ui:latest
+    container_name: kafka-ui
+    restart: unless-stopped
+
+    depends_on:
+      kafka:
+        condition: service_healthy
+
+    ports:
+      - "8080:8080"
+
+    environment:
+      KAFKA_CLUSTERS_0_NAME: Smart Order Cluster
+      KAFKA_CLUSTERS_0_BOOTSTRAPSERVERS: kafka:9092
+
+    networks:
+      - smart-order-network
+
+
+  # ==========================================================
+  # PgAdmin
+  # ==========================================================
+  pgadmin:
+    image: dpage/pgadmin4:9.6
+    container_name: pgadmin
+    restart: unless-stopped
+
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+    environment:
+      PGADMIN_DEFAULT_EMAIL: admin@smartorder.com
+      PGADMIN_DEFAULT_PASSWORD: admin123
+
+    ports:
+      - "5050:80"
+
+    volumes:
+      - pgadmin-data:/var/lib/pgadmin
+
+    networks:
+      - smart-order-network
+
+  order-service:
+    build:
+      context: .
+      dockerfile: order-service/Dockerfile
+
+    container_name: order-service
+
+    depends_on:
+      postgres:
+        condition: service_healthy
+      kafka:
+        condition: service_healthy
+
+    environment:
+      SPRING_PROFILES_ACTIVE: docker
+
+    ports:
+      - "8081:8080"
+
+    networks:
+      - smart-order-network
+
+  inventory-service:
+    build:
+      context: .
+      dockerfile: inventory-service/Dockerfile
+
+    container_name: inventory-service
+
+    depends_on:
+      postgres:
+        condition: service_healthy
+      kafka:
+        condition: service_healthy
+
+    environment:
+      SPRING_PROFILES_ACTIVE: docker
+
+    ports:
+      - "8082:8080"
+
+    networks:
+      - smart-order-network
+
+  payment-service:
+    build:
+      context: .
+      dockerfile: payment-service/Dockerfile
+
+    container_name: payment-service
+
+    depends_on:
+      postgres:
+        condition: service_healthy
+      kafka:
+        condition: service_healthy
+
+    environment:
+      SPRING_PROFILES_ACTIVE: docker
+
+    ports:
+      - "8083:8080"
+
+    networks:
+      - smart-order-network
+
+volumes:
+  postgres-data:
+  pgadmin-data:
+
+networks:
+  smart-order-network:
+    driver: bridge

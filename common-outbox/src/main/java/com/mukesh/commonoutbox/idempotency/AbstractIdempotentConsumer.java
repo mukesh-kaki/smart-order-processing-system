@@ -13,10 +13,16 @@ public abstract class AbstractIdempotentConsumer<T extends DomainEvent> {
 
     public final void process(T event) {
 
+        log.info(
+                "Processing {} with EventId={}",
+                event.eventType(),
+                event.eventId()
+        );
+
         if (processedEventService.alreadyProcessed(event.eventId())) {
 
             log.info(
-                    "Ignoring duplicate {}. EventId={}",
+                    "Duplicate event ignored. EventType={} EventId={}",
                     event.eventType(),
                     event.eventId()
             );
@@ -24,7 +30,40 @@ public abstract class AbstractIdempotentConsumer<T extends DomainEvent> {
             return;
         }
 
-        handle(event);
+        try {
+
+            handle(event);
+
+            processedEventService.markProcessed(
+                    event,
+                    getClass()
+            );
+
+            log.info(
+                    "Successfully processed {} EventId={}",
+                    event.eventType(),
+                    event.eventId()
+            );
+
+        } catch (Exception ex) {
+
+            log.error(
+                    "Failed processing {} EventId={}",
+                    event.eventType(),
+                    event.eventId(),
+                    ex
+            );
+
+            /*
+             * Very important:
+             *
+             * We DO NOT mark the event as processed.
+             *
+             * Kafka Retry / DLQ will handle this message.
+             */
+
+            throw ex;
+        }
 
     }
 

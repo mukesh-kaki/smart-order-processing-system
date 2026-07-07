@@ -1,0 +1,23 @@
+server:
+  port: 8081
+
+spring:
+
+  datasource:
+    url: jdbc:postgresql://dev-order-db:5432/orderdb
+    username: order
+    password: password
+
+  jpa:
+    hibernate:
+      ddl-auto: validate
+
+  kafka:
+
+    bootstrap-servers: dev-kafka:9092
+
+    consumer:
+      group-id: order-service
+
+    producer:
+      acks: all

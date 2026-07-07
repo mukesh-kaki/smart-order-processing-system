@@ -3,7 +3,9 @@ package com.mukesh.order.publisher;
 import com.mukesh.commonoutbox.entity.OutboxEntity;
 import com.mukesh.commonoutbox.entity.EventStatus;
 import com.mukesh.commonoutbox.repository.OutboxRepository;
+import com.mukesh.events.DomainEvent;
 import com.mukesh.order.config.KafkaTopicProperties;
+import com.mukesh.order.producer.KafkaEventPublisher;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.kafka.core.KafkaTemplate;
@@ -18,55 +20,59 @@ import java.util.concurrent.ExecutionException;
 @Component
 @RequiredArgsConstructor
 public class OrderOutboxPublisher {
+
     private final OutboxRepository outboxRepository;
-    private final KafkaTemplate<String, Object> kafkaTemplate;
     private final KafkaTopicProperties topicProperties;
-    //private final ObjectMapper objectMapper;
+    private final KafkaEventPublisher kafkaEventPublisher;
 
+    @Scheduled(fixedDelayString = "${app.scheduler.outbox-delay}")
+    public void publishEvents() {
 
-    @Scheduled(fixedDelay = 5000)
-    public void publishEvents(){
-
-        List<OutboxEntity> events= outboxRepository.findByStatus(EventStatus.NEW);
+        List<OutboxEntity> events =
+                outboxRepository.findByStatus(EventStatus.NEW);
 
         if (events.isEmpty()) {
             return;
         }
 
-        log.info("Found {} unpublished events", events.size());
+        log.info("Found {} pending outbox events", events.size());
 
-        for(OutboxEntity event: events){
-            try{
-                publish(event);
+        for (OutboxEntity event : events) {
 
-            }catch(InterruptedException  ex){
-                Thread.currentThread().interrupt();
-                log.error("Failed to publish event {}", event.getId(), ex);
-            }catch(ExecutionException ex){
-                log.error("Kafka publish failed for event {}", event.getId(), ex);
+            try {
+
+                String topic =
+                        topicProperties.getTopic(event.getEventType());
+
+                kafkaEventPublisher.publish(
+                        topic,
+                        event.getAggregateId().toString(),
+                        (DomainEvent) event.getPayload()
+                );
+
+                event.setStatus(EventStatus.SENT);
+                event.setPublishedAt(Instant.now());
+
+                outboxRepository.save(event);
+
+                log.info(
+                        "Published eventId={} eventType={} aggregateId={} topic={}",
+                        event.getId(),
+                        event.getEventType(),
+                        event.getAggregateId(),
+                        topic
+                );
+
+            } catch (Exception ex) {
+
+                log.error(
+                        "Failed to publish eventId={} eventType={}",
+                        event.getId(),
+                        event.getEventType(),
+                        ex
+                );
             }
         }
-    }
-
-    private void publish(OutboxEntity event)
-            throws InterruptedException, ExecutionException {
-
-        String topic = topicProperties.getTopic(event.getEventType());
-
-        kafkaTemplate.send(
-                topic,
-                event.getAggregateId().toString(),
-                event.getPayload()
-        ).get();
-        event.setStatus(EventStatus.SENT);
-        event.setPublishedAt(Instant.now());
-
-        outboxRepository.save(event); // Database save the event
-
-        log.info("Published Event {} to Topic {}",
-                event.getId(),
-                topic);
-
     }
 
 }

@@ -1,0 +1,22 @@
+server:
+  port: 8081
+
+spring:
+
+  datasource:
+    url: ${ORDER_DB_URL}
+    username: ${ORDER_DB_USERNAME}
+    password: ${ORDER_DB_PASSWORD}
+
+  jpa:
+    hibernate:
+      ddl-auto: validate
+
+  kafka:
+    bootstrap-servers: ${KAFKA_BOOTSTRAP_SERVERS}
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,metrics,prometheus

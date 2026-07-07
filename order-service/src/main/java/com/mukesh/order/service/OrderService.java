@@ -1,5 +1,6 @@
 package com.mukesh.order.service;
 
+import com.mukesh.events.InventoryReleasedEvent;
 import com.mukesh.events.InventoryReservedEvent;
 import com.mukesh.events.PaymentCompletedEvent;
 import com.mukesh.events.PaymentFailedEvent;
@@ -15,5 +16,7 @@ public interface OrderService {
     void handlePaymentCompleted(PaymentCompletedEvent event);
 
     void handlePaymentFailed(PaymentFailedEvent event);
+
+    void handleInventoryReleased(InventoryReleasedEvent event);
 
 }
