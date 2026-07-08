@@ -47,7 +47,7 @@ public class OrderOutboxPublisher {
                 kafkaEventPublisher.publish(
                         topic,
                         event.getAggregateId().toString(),
-                        (DomainEvent) event.getPayload()
+                        event.getPayload()
                 );
 
                 event.setStatus(EventStatus.SENT);

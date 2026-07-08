@@ -15,6 +15,8 @@ import java.util.Map;
 @ConfigurationProperties(prefix="app.kafka.topics")
 public class KafkaTopicProperties {
 
+    private String bootstrapServers;
+
     private Map<String, String> mappings=new HashMap<>();
     public String getTopic (String eventType){
         String topic=mappings.get(eventType);

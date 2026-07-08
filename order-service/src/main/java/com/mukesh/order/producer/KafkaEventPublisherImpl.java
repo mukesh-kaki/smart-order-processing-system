@@ -21,21 +21,20 @@ public class KafkaEventPublisherImpl implements KafkaEventPublisher{
     public void publish(
             String topic,
             String key,
-            DomainEvent event) {
+            String payload) {
 
         try {
 
             SendResult<String, Object> result =
                     kafkaTemplate
-                            .send(topic, key, event)
+                            .send(topic, key, payload)
                             .get();
 
             log.info(
                     "Kafka publish successful | topic={} partition={} offset={} eventType={}",
                     result.getRecordMetadata().topic(),
                     result.getRecordMetadata().partition(),
-                    result.getRecordMetadata().offset(),
-                    event.eventType()
+                    result.getRecordMetadata().offset()
             );
 
         } catch (InterruptedException ex) {

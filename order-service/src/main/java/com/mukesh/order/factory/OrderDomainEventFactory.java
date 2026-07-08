@@ -79,7 +79,6 @@ public class OrderDomainEventFactory {
         return new InventoryReleasedEvent(
                 UUID.randomUUID(),
                 order.getOrderId(),
-                order.getCustomerId(),
                 item.getProductId(),
                 item.getQuantity(),
                 Instant.now()

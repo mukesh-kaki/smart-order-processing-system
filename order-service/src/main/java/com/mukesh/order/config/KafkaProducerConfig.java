@@ -26,7 +26,7 @@ public class KafkaProducerConfig {
 
         Map<String, Object> properties=new HashMap<>();
 
-        properties.put(ProducerConfig.BOOTSTRAP_SERVERS_CONFIG, KafkaTopicProperties.getBootstrapServers());
+        properties.put(ProducerConfig.BOOTSTRAP_SERVERS_CONFIG, kafkaTopicProperties.getBootstrapServers());
 
         properties.put(ProducerConfig.KEY_SERIALIZER_CLASS_CONFIG, StringSerializer.class);
 
