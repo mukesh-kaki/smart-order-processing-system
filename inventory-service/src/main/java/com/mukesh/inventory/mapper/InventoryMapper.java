@@ -18,9 +18,7 @@ public interface InventoryMapper {
 
     @Mapping(target = "eventId",
             expression = "java(UUID.randomUUID())")
-    @Mapping(target = "eventType",
-            constant = "InventoryReservedEvent")
-    @Mapping(target = "occurredOn",
+    @Mapping(target = "reservedAt",
             expression = "java(Instant.now())")
     InventoryReservedEvent toReservedEvent(OrderCreatedEvent event);
 
