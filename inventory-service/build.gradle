@@ -4,30 +4,53 @@ plugins {
     id 'io.spring.dependency-management'
 }
 
+group = 'com.mukesh'
+version = '1.0-SNAPSHOT'
+
+java {
+    toolchain {
+        languageVersion = JavaLanguageVersion.of(21)
+    }
+}
+
 repositories {
     mavenCentral()
 }
 
 dependencies {
 
+    // Internal Modules
     implementation project(":common-events")
-
     implementation project(":common-outbox")
 
+    // Spring Boot
     implementation "org.springframework.boot:spring-boot-starter-web"
-
-    implementation "org.springframework.kafka:spring-kafka"
-
     implementation "org.springframework.boot:spring-boot-starter-data-jpa"
+    implementation "org.springframework.kafka:spring-kafka"
+    implementation "org.springframework.boot:spring-boot-starter-validation"
 
-    implementation "org.postgresql:postgresql"
+    // Database
+    runtimeOnly "org.postgresql:postgresql"
 
+    // Jackson
+    implementation "com.fasterxml.jackson.core:jackson-databind"
+
+    // MapStruct
     implementation "org.mapstruct:mapstruct:1.6.0"
-
     annotationProcessor "org.mapstruct:mapstruct-processor:1.6.0"
 
+    // Lombok
     compileOnly "org.projectlombok:lombok"
-
     annotationProcessor "org.projectlombok:lombok"
 
+    // Lombok + MapStruct
+    annotationProcessor "org.projectlombok:lombok-mapstruct-binding:0.2.0"
+
+    // Testing
+    testImplementation "org.springframework.boot:spring-boot-starter-test"
+    testImplementation "org.springframework.kafka:spring-kafka-test"
+}
+
+tasks.named('test') {
+    useJUnitPlatform()
 }

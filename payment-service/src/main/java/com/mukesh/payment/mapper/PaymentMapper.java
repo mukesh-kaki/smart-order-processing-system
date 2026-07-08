@@ -33,10 +33,10 @@ public interface PaymentMapper {
     )
     PaymentCompletedEvent toPaymentCompletedEvent(PaymentEntity payment);
 
-    @Mapping(target="reason", source = "failureReason")
-    @Mapping(
-            target = "failedAt",
-            expression = "java(java.time.Instant.now())"
-    )
+    @Mapping(target = "eventId",
+            expression = "java(java.util.UUID.randomUUID())")
+    @Mapping(target = "reason", source = "failureReason")
+    @Mapping(target = "failedAt",
+            expression = "java(java.time.Instant.now())")
     PaymentFailedEvent toPaymentFailedEvent(PaymentEntity payment);
 }
