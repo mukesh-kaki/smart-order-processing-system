@@ -5,6 +5,21 @@ spring:
   profiles:
     active: ${SPRING_PROFILES_ACTIVE:local}
 
+  datasource:
+    url: jdbc:postgresql://localhost:5432/order_db
+    username: postgres
+    password: postgres
+
+  jpa:
+    hibernate:
+      ddl-auto: update
+
+    show-sql: true
+
+    properties:
+      hibernate:
+        format_sql: true
+
 outbox:
   publisher:
     fixed-delay: 5000
@@ -20,6 +35,12 @@ app:
         PaymentFailedEvent: payment-failed
         InventoryReleaseEvent: inventory-release
         InventoryReleasedEvent: inventory-released
+
+jwt:
+  secret: 4a0c8d5e7b2f91c3e8d4a6b1f9c7e2d5a8b6c4f1e9d3a7b5c2f8e6d1a9b3c7f5
+  expiration: 900000
+  refresh:
+    expiration: 2592000000
 
 logging:
   level:
