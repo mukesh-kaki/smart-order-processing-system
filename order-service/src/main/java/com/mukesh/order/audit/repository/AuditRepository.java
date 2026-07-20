@@ -9,7 +9,10 @@ import org.springframework.data.jpa.repository.JpaRepository;
 
 import java.util.UUID;
 
-public interface AuditRepository extends JpaRepository<AuditLog, UUID> {
+public interface AuditRepository
+        extends JpaRepository<AuditLog, UUID> {
+
+    Page<AuditLog> findAll(Pageable pageable);
 
     Page<AuditLog> findByUsername(
             String username,
@@ -23,11 +26,6 @@ public interface AuditRepository extends JpaRepository<AuditLog, UUID> {
 
     Page<AuditLog> findByStatus(
             AuditStatus status,
-            Pageable pageable
-    );
-
-    Page<AuditLog> findByEntityType(
-            String entityType,
             Pageable pageable
     );
 

@@ -11,6 +11,13 @@ import com.mukesh.order.entity.AppUser;
 import com.mukesh.order.entity.security.RefreshToken;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
+import com.mukesh.order.audit.dto.AuditResponse;
+import com.mukesh.order.audit.enums.AuditAction;
+import com.mukesh.order.audit.enums.AuditStatus;
+import com.mukesh.order.audit.mapper.AuditMapper;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.util.UUID;
 
@@ -235,6 +242,51 @@ public class AuditService {
                         null
                 )
         );
+
+    }
+
+    @Transactional(readOnly = true)
+    public Page<AuditResponse> getAll(Pageable pageable) {
+
+        return repository
+                .findAll(pageable)
+                .map(AuditMapper::toResponse);
+
+    }
+
+    @Transactional(readOnly = true)
+    public Page<AuditResponse> getByUsername(
+            String username,
+            Pageable pageable
+    ) {
+
+        return repository
+                .findByUsername(username, pageable)
+                .map(AuditMapper::toResponse);
+
+    }
+
+    @Transactional(readOnly = true)
+    public Page<AuditResponse> getByAction(
+            AuditAction action,
+            Pageable pageable
+    ) {
+
+        return repository
+                .findByAction(action, pageable)
+                .map(AuditMapper::toResponse);
+
+    }
+
+    @Transactional(readOnly = true)
+    public Page<AuditResponse> getByStatus(
+            AuditStatus status,
+            Pageable pageable
+    ) {
+
+        return repository
+                .findByStatus(status, pageable)
+                .map(AuditMapper::toResponse);
 
     }
 
